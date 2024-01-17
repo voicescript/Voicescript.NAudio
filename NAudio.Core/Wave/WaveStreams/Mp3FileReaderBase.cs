@@ -123,7 +123,8 @@ namespace NAudio.Wave
                 Mp3WaveFormat = new Mp3WaveFormat(firstFrame.SampleRate,
                     firstFrame.ChannelMode == ChannelMode.Mono ? 1 : 2, firstFrame.FrameLength, (int) bitRate);
 
-                CreateTableOfContents();
+                bool insideSeek = false;
+                CreateTableOfContents(insideSeek);
                 tocIndex = 0;
 
                 // [Bit rate in Kilobits/sec] = [Length in kbits] / [time in seconds] 
@@ -160,13 +161,18 @@ namespace NAudio.Wave
         /// <returns>An MP3 Frame decompressor</returns>
         public delegate IMp3FrameDecompressor FrameDecompressorBuilder(WaveFormat mp3Format);
 
-        private void CreateTableOfContents()
+        private void CreateTableOfContents(bool insideSeek)
         {
             try
             {
                 // Just a guess at how many entries we'll need so the internal array need not resize very much
                 // 400 bytes per frame is probably a good enough approximation.
-                tableOfContents = new List<Mp3Index>((int)(mp3DataLength / 400));
+                tableOfContents = new List<Mp3Index>((int)((insideSeek ? mp3Stream.Length : mp3DataLength) / 400));
+                if(insideSeek)
+                {
+                    totalSamples = 0;
+                    mp3Stream.Position = 0;
+                }
                 Mp3Frame frame;
                 do
                 {
@@ -291,6 +297,9 @@ namespace NAudio.Wave
             {
                 lock (repositionLock)
                 {
+                    bool insideSeek = true;
+                    CreateTableOfContents(insideSeek);
+
                     value = Math.Max(Math.Min(value, Length), 0);
                     var samplePosition = value / bytesPerSample;
                     Mp3Index mp3Index = null;
