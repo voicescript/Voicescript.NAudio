@@ -1,6 +1,8 @@
 name: Publish NuGet Packages to GitHub Registry
 
 on:
+  push:
+    branches: [ main, master ]  # Add this to trigger on push to main or master
   release:
     types: [published]
   workflow_dispatch:  # Allows manual triggering
