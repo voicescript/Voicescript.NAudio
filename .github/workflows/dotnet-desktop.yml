@@ -1,0 +1,31 @@
+name: Build and Test
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Install Windows SDK
+        run: choco install windows-sdk-10.1 --version=10.1.18362.1 --yes
+
+      - name: Setup NuGet
+        uses: NuGet/setup-nuget@v1
+
+      - name: Restore packages
+        run: nuget restore "**/*.sln"
+
+      - name: Build solution
+        run: msbuild "**/*.sln" /p:Configuration=Release /p:Platform="Any CPU"
+
+      - name: Test
+        run: |
+          "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\Common7\IDE\Extensions\TestPlatform\vstest.console.exe" ^
+            .\path\to\your\test\project\bin\Release\*.dll ^
+            /TestCaseFilter:"TestCategory!=IntegrationTest"
