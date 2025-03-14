@@ -1,0 +1,69 @@
+name: Publish NuGet Packages to GitHub Registry
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:  # Allows manual triggering
+
+jobs:
+  build-and-publish:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: '6.0.x'
+        
+    - name: Read version
+      id: version
+      run: |
+        $version = Get-Content -Path ./version.txt -Raw
+        $version = $version.Trim()
+        echo "VERSION=$version" >> $env:GITHUB_OUTPUT
+        Write-Host "Package version: $version"
+      shell: pwsh
+        
+    - name: Restore dependencies
+      run: dotnet restore
+      
+    - name: Build
+      run: dotnet build --configuration Release --no-restore
+      
+    - name: Pack
+      run: |
+        $packages = @("NAudio.Core", "NAudio.Asio", "NAudio.WinForms", "NAudio.Midi", 
+                      "NAudio.WinMM", "NAudio.Wasapi", "NAudio.Uap",
+                      "NAudio", "NAudio.Extras")
+        
+        $version = "${{ steps.version.outputs.VERSION }}"
+        
+        foreach ($package in $packages) {
+          Write-Host "Packing $package with version $version"
+          dotnet pack "$package/$package.csproj" --configuration Release --no-build --output ./nupkgs /p:Version=$version
+        }
+      shell: pwsh
+      
+    - name: Setup NuGet
+      uses: NuGet/setup-nuget@v1
+      with:
+        nuget-version: '6.x'
+        
+    - name: Configure GitHub NuGet Source
+      run: |
+        nuget sources Add -Name "GitHub" -Source "https://nuget.pkg.github.com/voicescript/index.json" -Username ${{ github.repository_owner }} -Password ${{ secrets.TOKEN }}
+      shell: pwsh
+      
+    - name: Publish to GitHub NuGet Registry
+      run: |
+        $apiKey = "${{ secrets.TOKEN }}"
+        $githubNugetSource = "https://nuget.pkg.github.com/voicescript/index.json"
+        
+        Get-ChildItem -Path ./nupkgs -Filter *.nupkg | ForEach-Object {
+          Write-Host "Publishing $($_.Name) to GitHub NuGet registry"
+          dotnet nuget push $_.FullName --api-key $apiKey --source $githubNugetSource
+        }
+      shell: pwsh 
