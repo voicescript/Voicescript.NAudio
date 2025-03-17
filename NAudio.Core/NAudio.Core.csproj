@@ -15,6 +15,7 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageIcon>naudio-icon.png</PackageIcon>
+    <AssemblyName>Voicescript.NAudio.Core</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>

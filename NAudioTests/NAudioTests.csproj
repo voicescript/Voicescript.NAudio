@@ -2,6 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>net48</TargetFramework>
+    <AssemblyName>Voicescript.NAudioTests</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>
