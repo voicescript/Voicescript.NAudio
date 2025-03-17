@@ -9,6 +9,15 @@ jobs:
     runs-on: windows-latest
 
     steps:
+
+      - name: Auto Increment Semver Action
+        uses: MCKanpolat/auto-semver-action@1.0.5
+        id: versioning
+        with:
+          releaseType: patch
+          incrementPerCommit: false
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Checkout repository
         uses: actions/checkout@v3
 
@@ -18,14 +27,23 @@ jobs:
       - name: Setup NuGet
         uses: NuGet/setup-nuget@v1
 
-      - name: Restore packages
-        run: nuget restore "**/*.sln"
-
-      - name: Build solution
-        run: msbuild "**/*.sln" /p:Configuration=Release /p:Platform="Any CPU"
-
-      - name: Test
+      - name: Read version
+        id: version
         run: |
-          "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\Common7\IDE\Extensions\TestPlatform\vstest.console.exe" ^
-            .\path\to\your\test\project\bin\Release\*.dll ^
-            /TestCaseFilter:"TestCategory!=IntegrationTest"
+          $version = Get-Content -Path ./version.txt -Raw
+          $version = $version.Trim()
+          echo "VERSION=$version" >> $env:GITHUB_OUTPUT
+          Write-Host "Package version: $version"
+        shell: pwsh
+         
+      - name: Install Cake
+        run: dotnet tool install --global Cake.Tool --version 2.2.0
+
+      - name: Add .NET tools to PATH
+        run: echo "${HOME}/.dotnet/tools" >> $GITHUB_PATH
+
+      - name: Run Cake build
+        run: dotnet cake build.cake
+        env:
+          NUGET_API_KEY: ${{ secrets.GITHUB_TOKEN }}
+          PACKAGE_VERSION: ${{ steps.versioning.outputs.version }}
