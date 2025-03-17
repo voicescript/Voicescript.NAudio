@@ -45,5 +45,5 @@ jobs:
       - name: Run Cake build
         run: dotnet cake build.cake
         env:
-          NUGET_API_KEY: ${{ secrets.GITHUB_TOKEN }}
+          NUGET_API_KEY: ${{ secrets.TOKEN }}
           PACKAGE_VERSION: ${{ steps.versioning.outputs.version }}
