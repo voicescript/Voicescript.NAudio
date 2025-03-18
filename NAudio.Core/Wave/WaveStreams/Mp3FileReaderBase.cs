@@ -6,7 +6,7 @@ using System.Diagnostics;
 // ReSharper disable once CheckNamespace
 namespace NAudio.Wave
 {
-    class Mp3Index
+    internal class Mp3Index
     {
         public long FilePosition { get; set; }
         public long SamplePosition { get; set; }
@@ -88,6 +88,18 @@ namespace NAudio.Wave
             try
             {
                 mp3Stream = inputStream;
+                if (mp3Stream is FileStream)
+                {
+                    try
+                    {
+                        FileStream st = (FileStream)mp3Stream;
+                        streamForUpdatingToc = new FileStream(st.Name, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+                    }
+                    catch (Exception exc)
+                    {
+                        int a = 0;
+                    }
+                }
                 Id3v2Tag = Id3v2Tag.ReadTag(mp3Stream);
 
                 dataStartPosition = mp3Stream.Position;
@@ -130,17 +142,17 @@ namespace NAudio.Wave
                 Mp3WaveFormat = new Mp3WaveFormat(firstFrame.SampleRate,
                     firstFrame.ChannelMode == ChannelMode.Mono ? 1 : 2, firstFrame.FrameLength, (int) bitRate);
 
-                bool insideSeek = false;
-                CreateTableOfContents(insideSeek);
+                CreateTableOfContents();
                 tocIndex = 0;
 
-                // [Bit rate in Kilobits/sec] = [Length in kbits] / [time in seconds] 
+                // [Bit rate in Kilobits/sec] = [Length in kbits] / [time in seconds]
                 //                            = [Length in bits ] / [time in milliseconds]
 
                 // Note: in audio, 1 kilobit = 1000 bits.
                 // Calculated as a double to minimize rounding errors
                 bitRate = (mp3DataLength*8.0/TotalSeconds());
 
+                streamForUpdatingToc.Position = mp3Stream.Position;
                 mp3Stream.Position = dataStartPosition;
 
                 // now we know the real bitrate we can create an accurate MP3 WaveFormat
@@ -168,18 +180,13 @@ namespace NAudio.Wave
         /// <returns>An MP3 Frame decompressor</returns>
         public delegate IMp3FrameDecompressor FrameDecompressorBuilder(WaveFormat mp3Format);
 
-        private void CreateTableOfContents(bool insideSeek)
+        private void CreateTableOfContents()
         {
             try
             {
                 // Just a guess at how many entries we'll need so the internal array need not resize very much
                 // 400 bytes per frame is probably a good enough approximation.
-                tableOfContents = new List<Mp3Index>((int)((insideSeek ? mp3Stream.Length : mp3DataLength) / 400));
-                if(insideSeek)
-                {
-                    totalSamples = 0;
-                    mp3Stream.Position = 0;
-                }
+                tableOfContents = new List<Mp3Index>((int)(mp3DataLength / 400));
                 Mp3Frame frame;
                 do
                 {
@@ -197,6 +204,7 @@ namespace NAudio.Wave
                         tableOfContents.Add(index);
                     }
                 } while (frame != null);
+                Console.WriteLine($"tableOfContents: {tableOfContents.Count}");
             }
             catch (EndOfStreamException)
             {
@@ -279,6 +287,25 @@ namespace NAudio.Wave
             return frame;
         }
 
+        private Mp3Frame ReadNextFrame(Stream stream, bool readData)
+        {
+            Mp3Frame frame = null;
+            try
+            {
+                frame = Mp3Frame.LoadFromStream(stream, readData);
+                if (frame != null)
+                {
+                    tocIndex++;
+                }
+            }
+            catch (EndOfStreamException)
+            {
+                // suppress for now - it means we unexpectedly got to the end of the stream
+                // half way through
+            }
+            return frame;
+        }
+
         /// <summary>
         /// This is the length in bytes of data available to be read out from the Read method
         /// (i.e. the decompressed MP3 length)
@@ -304,9 +331,6 @@ namespace NAudio.Wave
             {
                 lock (repositionLock)
                 {
-                    bool insideSeek = true;
-                    CreateTableOfContents(insideSeek);
-
                     value = Math.Max(Math.Min(value, Length), 0);
                     var samplePosition = value / bytesPerSample;
                     Mp3Index mp3Index = null;
@@ -473,5 +497,33 @@ namespace NAudio.Wave
             }
             base.Dispose(disposing);
         }
-    }
-}
+
+        private Stream streamForUpdatingToc = null;
+
+        public void UpdateToc()
+        {
+            Mp3Frame frame;
+            do
+            {
+                var index = new Mp3Index();
+                index.FilePosition = streamForUpdatingToc.Position;
+                index.SamplePosition = totalSamples;
+                frame = ReadNextFrame(streamForUpdatingToc, false);
+                if (frame != null)
+                {
+                    ValidateFrameFormat(frame);
+
+                    totalSamples += frame.SampleCount;
+                    index.SampleCount = frame.SampleCount;
+                    index.ByteCount = (int)(streamForUpdatingToc.Position - index.FilePosition);
+                    //Console.WriteLine($"FilePosition: {index.FilePosition} SamplePosition: {index.SamplePosition} SampleCount: {index.SampleCount} ByteCount: {index.ByteCount}");
+                    tableOfContents.Add(index);
+                }
+                else
+                {
+                    streamForUpdatingToc.Position = index.FilePosition;
+                }
+            } while (frame != null);
+            Console.WriteLine($"UpdateToc: toc_count {tableOfContents.Count}");
+        }
+    }}
