@@ -204,7 +204,6 @@ namespace NAudio.Wave
                         tableOfContents.Add(index);
                     }
                 } while (frame != null);
-                Console.WriteLine($"tableOfContents: {tableOfContents.Count}");
             }
             catch (EndOfStreamException)
             {
@@ -278,6 +277,9 @@ namespace NAudio.Wave
                 {
                     tocIndex++;
                 }
+                else
+                {
+                }
             }
             catch (EndOfStreamException)
             {
@@ -295,7 +297,7 @@ namespace NAudio.Wave
                 frame = Mp3Frame.LoadFromStream(stream, readData);
                 if (frame != null)
                 {
-                    tocIndex++;
+                    //tocIndex++;
                 }
             }
             catch (EndOfStreamException)
@@ -494,11 +496,16 @@ namespace NAudio.Wave
                     decompressor.Dispose();
                     decompressor = null;
                 }
+                if (streamForUpdatingToc != null)
+                {
+                    streamForUpdatingToc.Dispose();
+                    streamForUpdatingToc = null;
+                }
             }
             base.Dispose(disposing);
         }
 
-        private Stream streamForUpdatingToc = null;
+        private FileStream streamForUpdatingToc = null;
 
         public void UpdateToc()
         {
@@ -516,14 +523,15 @@ namespace NAudio.Wave
                     totalSamples += frame.SampleCount;
                     index.SampleCount = frame.SampleCount;
                     index.ByteCount = (int)(streamForUpdatingToc.Position - index.FilePosition);
-                    //Console.WriteLine($"FilePosition: {index.FilePosition} SamplePosition: {index.SamplePosition} SampleCount: {index.SampleCount} ByteCount: {index.ByteCount}");
-                    tableOfContents.Add(index);
+                    lock (repositionLock)
+                    {
+                        tableOfContents.Add(index);
+                    }
                 }
                 else
                 {
-                    streamForUpdatingToc.Position = index.FilePosition;
+                    //streamForUpdatingToc.Position = index.FilePosition;
                 }
             } while (frame != null);
-            Console.WriteLine($"UpdateToc: toc_count {tableOfContents.Count}");
         }
     }}
