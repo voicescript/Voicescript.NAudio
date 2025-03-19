@@ -507,7 +507,7 @@ namespace NAudio.Wave
 
         private FileStream streamForUpdatingToc = null;
 
-        public void UpdateToc()
+        public virtual void UpdateToc()
         {
             Mp3Frame frame;
             do
@@ -534,4 +534,5 @@ namespace NAudio.Wave
                 }
             } while (frame != null);
         }
-    }}
+    }
+}
