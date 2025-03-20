@@ -15,7 +15,7 @@ jobs:
         id: versioning
         with:
           releaseType: patch
-          incrementPerCommit: false
+          incrementPerCommit: true
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Checkout repository
