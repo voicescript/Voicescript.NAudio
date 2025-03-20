@@ -20,7 +20,7 @@ jobs:
 
 
       - name: Next Release Number
-        id: version
+        id: next_version
         run: |
           echo ${{ steps.versioning.outputs.version }}
           ls 123456
