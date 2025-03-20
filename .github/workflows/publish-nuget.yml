@@ -16,7 +16,7 @@ jobs:
         with:
           releaseType: patch
           incrementPerCommit: false
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          github_token: ${{ secrets.TOKEN }}
 
       - name: Checkout repository
         uses: actions/checkout@v3
