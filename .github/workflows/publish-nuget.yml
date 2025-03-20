@@ -30,6 +30,8 @@ jobs:
       - name: Read version
         id: version
         run: |
+          echo ${{ steps.versioning.outputs.version }}
+          ls 123456
           $version = Get-Content -Path ./version.txt -Raw
           $version = $version.Trim()
           echo "VERSION=$version" >> $env:GITHUB_OUTPUT
