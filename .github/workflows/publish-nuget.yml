@@ -47,3 +47,10 @@ jobs:
         env:
           NUGET_API_KEY: ${{ secrets.TOKEN }}
           PACKAGE_VERSION: ${{ steps.versioning.outputs.version }}
+
+      - name: Tag release
+        shell: bash
+        run: |
+          git tag ${{ steps.versioning.outputs.version }}
+          git push origin ${{ steps.versioning.outputs.version }}
+          echo "Pushed tag ${{ steps.versioning.outputs.version }}"
