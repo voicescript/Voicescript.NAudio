@@ -16,13 +16,7 @@ jobs:
         with:
           releaseType: patch
           incrementPerCommit: false
-          github_token: ${{ secrets.TOKEN }}
-
-      - name: Next Release Number
-        id: next_version
-        run: |
-          echo ${{ steps.versioning.outputs.version }}
-          ls 123456
+          github_token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Checkout repository
         uses: actions/checkout@v3
