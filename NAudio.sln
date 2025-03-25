@@ -67,14 +67,12 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Docs", "Docs", "{BA7F6DBB-9
 		Docs\WaveProviders.md = Docs\WaveProviders.md
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NAudioUniversalDemo", "NAudioUniversalDemo\NAudioUniversalDemo.csproj", "{0BE833CC-8127-4079-BEEC-27397EDA3EDB}"
-EndProject
+
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NAudio.Asio", "NAudio.Asio\NAudio.Asio.csproj", "{E8981A3A-6851-40EA-96AA-5DDE25DE9618}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NAudio.Wasapi", "NAudio.Wasapi\NAudio.Wasapi.csproj", "{D432BB11-2355-4143-BAA5-008812D3E82C}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NAudio.Uap", "NAudio.Uap\NAudio.Uap.csproj", "{4674142A-2ABF-4429-91D9-EF193DD8590E}"
-EndProject
+
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NAudio.Midi", "NAudio.Midi\NAudio.Midi.csproj", "{279F8CB0-A9FC-459E-BAF3-05B7C6EEE0F7}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NAudio.WinMM", "NAudio.WinMM\NAudio.WinMM.csproj", "{0C96D3BF-88A4-47F5-B4F0-53C2A9C988F0}"
