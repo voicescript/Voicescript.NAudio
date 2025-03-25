@@ -18,9 +18,9 @@ namespace NAudio.Wave
         /// <param name="sourceFormat">The MP3 source format</param>
         public AcmMp3FrameDecompressor(WaveFormat sourceFormat)
         {
-            this.pcmFormat = AcmStream.SuggestPcmFormat(sourceFormat);
             try
             {
+                this.pcmFormat = AcmStream.SuggestPcmFormat(sourceFormat);
                 conversionStream = new AcmStream(sourceFormat, pcmFormat);
             }
             catch (Exception)

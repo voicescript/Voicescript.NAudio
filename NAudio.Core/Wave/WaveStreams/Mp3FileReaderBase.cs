@@ -145,7 +145,7 @@ namespace NAudio.Wave
                 CreateTableOfContents();
                 tocIndex = 0;
 
-                // [Bit rate in Kilobits/sec] = [Length in kbits] / [time in seconds]
+                // [Bit rate in Kilobits/sec] = [Length in kbits] / [time in seconds] 
                 //                            = [Length in bits ] / [time in milliseconds]
 
                 // Note: in audio, 1 kilobit = 1000 bits.
@@ -277,9 +277,6 @@ namespace NAudio.Wave
                 {
                     tocIndex++;
                 }
-                else
-                {
-                }
             }
             catch (EndOfStreamException)
             {
@@ -295,10 +292,6 @@ namespace NAudio.Wave
             try
             {
                 frame = Mp3Frame.LoadFromStream(stream, readData);
-                if (frame != null)
-                {
-                    //tocIndex++;
-                }
             }
             catch (EndOfStreamException)
             {
