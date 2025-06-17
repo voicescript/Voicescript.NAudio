@@ -214,11 +214,18 @@ namespace NAudio.CoreAudioApi
             {
                 exception = e;
             }
-            finally
+
+            try
             {
                 client.Stop();
                 // don't dispose - the AudioClient only gets disposed when WasapiCapture is disposed
             }
+            catch (Exception clientExc)
+            {
+                if (exception != null) { exception = new AggregateException(exception, clientExc); }
+                else { exception = clientExc; }
+            }
+
             captureThread = null;
             captureState = CaptureState.Stopped;
             RaiseRecordingStopped(exception);
