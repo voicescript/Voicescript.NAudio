@@ -281,7 +281,7 @@ namespace NAudio.CoreAudioApi
             }
         }
 
-        private void ReadNextPacket(AudioCaptureClient capture)
+        protected virtual void ReadNextPacket(AudioCaptureClient capture)
         {
             int packetSize = capture.GetNextPacketSize();
             int recordBufferOffset = 0;
