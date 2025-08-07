@@ -281,15 +281,20 @@ namespace NAudio.CoreAudioApi
             }
         }
 
-        private void ReadNextPacket(AudioCaptureClient capture)
+        protected virtual void ReadNextPacket(AudioCaptureClient capture)
         {
             int packetSize = capture.GetNextPacketSize();
             int recordBufferOffset = 0;
             //Debug.WriteLine(string.Format("packet size: {0} samples", packetSize / 4));
 
+            long devicePosition = 0;
+            long qpcPosition = 0;
+            AudioClientBufferFlags flags = AudioClientBufferFlags.None;
+
             while (packetSize != 0)
             {
-                IntPtr buffer = capture.GetBuffer(out int framesAvailable, out AudioClientBufferFlags flags);
+                IntPtr buffer = capture.GetBuffer(out int framesAvailable, out flags, 
+                    out devicePosition, out qpcPosition);
 
                 int bytesAvailable = framesAvailable * bytesPerFrame;
 
@@ -298,7 +303,8 @@ namespace NAudio.CoreAudioApi
                 int spaceRemaining = Math.Max(0, recordBuffer.Length - recordBufferOffset);
                 if (spaceRemaining < bytesAvailable && recordBufferOffset > 0)
                 {
-                    DataAvailable?.Invoke(this, new WaveInEventArgs(recordBuffer, recordBufferOffset));
+                    DataAvailable?.Invoke(this, new WasapiCaptureWaveInEventArgs(
+                        recordBuffer, recordBufferOffset, devicePosition, qpcPosition, flags));
                     recordBufferOffset = 0;
                 }
 
@@ -315,7 +321,9 @@ namespace NAudio.CoreAudioApi
                 capture.ReleaseBuffer(framesAvailable);
                 packetSize = capture.GetNextPacketSize();
             }
-            DataAvailable?.Invoke(this, new WaveInEventArgs(recordBuffer, recordBufferOffset));
+
+            DataAvailable?.Invoke(this, new WasapiCaptureWaveInEventArgs(
+                recordBuffer, recordBufferOffset, devicePosition, qpcPosition, flags));
         }
 
         /// <summary>
@@ -334,6 +342,41 @@ namespace NAudio.CoreAudioApi
                 audioClient.Dispose();
                 audioClient = null;
             }
+        }
+
+        /// <summary>
+        public class WasapiCaptureWaveInEventArgs : WaveInEventArgs
+        {
+            /// <summary>
+            /// Creates new WaveInEventArgs
+            /// </summary>
+            public WasapiCaptureWaveInEventArgs(
+                byte[] buffer,
+                int bytes,
+                long devicePosition,
+                long qpcPosition,
+                AudioClientBufferFlags audioClientBufferFlags)
+                : base(buffer, bytes)
+            {
+                DevicePosition = devicePosition;
+                QpcPosition = qpcPosition;
+                AudioClientBufferFlags = audioClientBufferFlags;
+            }
+
+            /// <summary>
+            /// 64-bit frame offset since stream start
+            /// </summary>
+            public long DevicePosition { get; }
+
+            /// <summary>
+            /// High-precision timestamp (QueryPerformanceCounter)
+            /// </summary>
+            public long QpcPosition { get; }
+
+            /// <summary>
+            /// Audio client buffer flags
+            /// </summary>
+            public AudioClientBufferFlags AudioClientBufferFlags { get; }
         }
     }
 }
