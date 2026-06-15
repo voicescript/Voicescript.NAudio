@@ -242,7 +242,7 @@ namespace NAudio.Wave
         /// <returns>Next mp3 frame, or null if EOF</returns>
         public Mp3Frame ReadNextFrame()
         {
-            var frame = ReadNextFrame(true);
+            var frame = ReadNextFrame(mp3Stream, true, increaseTocIndex: true);
             if (frame != null) position += frame.SampleCount*bytesPerSample;
             return frame;
         }
@@ -251,31 +251,16 @@ namespace NAudio.Wave
         /// Reads the next mp3 frame
         /// </summary>
         /// <returns>Next mp3 frame, or null if EOF</returns>
-        private Mp3Frame ReadNextFrame(bool readData)
-        {
-            Mp3Frame frame = null;
-            try
-            {
-                frame = Mp3Frame.LoadFromStream(mp3Stream, readData);
-                if (frame != null)
-                {
-                    tocIndex++;
-                }
-            }
-            catch (EndOfStreamException)
-            {
-                // suppress for now - it means we unexpectedly got to the end of the stream
-                // half way through
-            }
-            return frame;
-        }
-
-        private Mp3Frame ReadNextFrame(Stream stream, bool readData)
+        private Mp3Frame ReadNextFrame(Stream stream, bool readData, bool increaseTocIndex)
         {
             Mp3Frame frame = null;
             try
             {
                 frame = Mp3Frame.LoadFromStream(stream, readData);
+                if (increaseTocIndex && frame != null)
+                {
+                    tocIndex++;
+                }
             }
             catch (EndOfStreamException)
             {
@@ -394,7 +379,7 @@ namespace NAudio.Wave
 
                 while (bytesRead < numBytes)
                 {
-                    Mp3Frame frame = ReadNextFrame(true); // internal read - should not advance position
+                    Mp3Frame frame = ReadNextFrame(mp3Stream, true, increaseTocIndex: true); // internal read - should not advance position
                     if (frame != null)
                     {
                         int decompressed = decompressor.DecompressFrame(frame, decompressBuffer, 0);
@@ -489,7 +474,7 @@ namespace NAudio.Wave
             UpdateToc(streamForUpdatingToc, isLiveFile: true);
         }
 
-        public void UpdateToc(Stream stream, bool isLiveFile)
+        private void UpdateToc(Stream stream, bool isLiveFile)
         {
             Mp3Frame frame;
             do
@@ -498,9 +483,9 @@ namespace NAudio.Wave
                 index.FilePosition = stream.Position;
                 index.SamplePosition = totalSamples;
                 if(isLiveFile)
-                    frame = ReadNextFrame(stream, false);
+                    frame = ReadNextFrame(stream, false, increaseTocIndex: false);
                 else
-                    frame = ReadNextFrame(false);
+                    frame = ReadNextFrame(stream, false, increaseTocIndex: true);
                 if (frame != null)
                 {
                     ValidateFrameFormat(frame);
