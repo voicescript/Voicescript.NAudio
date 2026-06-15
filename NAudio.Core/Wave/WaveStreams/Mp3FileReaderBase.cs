@@ -187,23 +187,7 @@ namespace NAudio.Wave
                 // Just a guess at how many entries we'll need so the internal array need not resize very much
                 // 400 bytes per frame is probably a good enough approximation.
                 tableOfContents = new List<Mp3Index>((int)(mp3DataLength / 400));
-                Mp3Frame frame;
-                do
-                {
-                    var index = new Mp3Index();
-                    index.FilePosition = mp3Stream.Position;
-                    index.SamplePosition = totalSamples;
-                    frame = ReadNextFrame(false);
-                    if (frame != null)
-                    {
-                        ValidateFrameFormat(frame);
-
-                        totalSamples += frame.SampleCount;
-                        index.SampleCount = frame.SampleCount;
-                        index.ByteCount = (int)(mp3Stream.Position - index.FilePosition);
-                        tableOfContents.Add(index);
-                    }
-                } while (frame != null);
+                UpdateToc(mp3Stream, isLiveFile: false);
             }
             catch (EndOfStreamException)
             {
@@ -502,20 +486,28 @@ namespace NAudio.Wave
 
         public virtual void UpdateToc()
         {
+            UpdateToc(streamForUpdatingToc, isLiveFile: true);
+        }
+
+        public void UpdateToc(Stream stream, bool isLiveFile)
+        {
             Mp3Frame frame;
             do
             {
                 var index = new Mp3Index();
-                index.FilePosition = streamForUpdatingToc.Position;
+                index.FilePosition = stream.Position;
                 index.SamplePosition = totalSamples;
-                frame = ReadNextFrame(streamForUpdatingToc, false);
+                if(isLiveFile)
+                    frame = ReadNextFrame(stream, false);
+                else
+                    frame = ReadNextFrame(false);
                 if (frame != null)
                 {
                     ValidateFrameFormat(frame);
 
                     totalSamples += frame.SampleCount;
                     index.SampleCount = frame.SampleCount;
-                    index.ByteCount = (int)(streamForUpdatingToc.Position - index.FilePosition);
+                    index.ByteCount = (int)(stream.Position - index.FilePosition);
                     lock (repositionLock)
                     {
                         tableOfContents.Add(index);
