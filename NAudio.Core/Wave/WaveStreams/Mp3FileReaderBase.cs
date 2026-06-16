@@ -6,14 +6,6 @@ using System.Diagnostics;
 // ReSharper disable once CheckNamespace
 namespace NAudio.Wave
 {
-    internal class Mp3Index
-    {
-        public long FilePosition { get; set; }
-        public long SamplePosition { get; set; }
-        public int SampleCount { get; set; }
-        public int ByteCount { get; set; }
-    }
-
     /// <summary>
     /// Class for reading from MP3 files
     /// </summary>
@@ -32,7 +24,8 @@ namespace NAudio.Wave
         private readonly XingHeader xingHeader;
         private readonly bool ownInputStream;
 
-        private List<Mp3Index> tableOfContents;
+        private List<long> tocFilePositions;
+        private int samplesPerFrame;
         private int tocIndex;
 
         private long totalSamples;
@@ -186,7 +179,7 @@ namespace NAudio.Wave
             {
                 // Just a guess at how many entries we'll need so the internal array need not resize very much
                 // 400 bytes per frame is probably a good enough approximation.
-                tableOfContents = new List<Mp3Index>((int)(mp3DataLength / 400));
+                tocFilePositions = new List<long>((int)(mp3DataLength / 400));
                 UpdateToc(mp3Stream, isLiveFile: false);
             }
             catch (EndOfStreamException)
@@ -297,28 +290,18 @@ namespace NAudio.Wave
                 {
                     value = Math.Max(Math.Min(value, Length), 0);
                     var samplePosition = value / bytesPerSample;
-                    Mp3Index mp3Index = null;
-                    for (int index = 0; index < tableOfContents.Count; index++)
-                    {
-                        if (tableOfContents[index].SamplePosition + tableOfContents[index].SampleCount > samplePosition)
-                        {
-                            mp3Index = tableOfContents[index];
-                            tocIndex = index;
-                            break;
-                        }
-                    }
 
                     decompressBufferOffset = 0;
                     decompressLeftovers = 0;
                     repositionedFlag = true;
 
-                    if (mp3Index != null)
+                    if (samplePosition < totalSamples && samplesPerFrame > 0 && tocFilePositions.Count > 0)
                     {
-                        // perform the reposition
-                        mp3Stream.Position = mp3Index.FilePosition;
+                        tocIndex = (int)(samplePosition / samplesPerFrame);
+                        mp3Stream.Position = tocFilePositions[tocIndex];
 
                         // set the offset into the buffer (that is yet to be populated in Read())
-                        var frameOffset = samplePosition - mp3Index.SamplePosition;
+                        var frameOffset = samplePosition - (long)tocIndex * samplesPerFrame;
                         if (frameOffset > 0)
                         {
                             decompressBufferOffset = (int)frameOffset * bytesPerSample;
@@ -372,7 +355,7 @@ namespace NAudio.Wave
                     // the data as it would be when reading sequentially from the beginning, because 
                     // the decoder is missing the required overlap from the previous frame.
                     tocIndex = Math.Max(0, tocIndex - 3); // no warm-up at the beginning of the stream
-                    mp3Stream.Position = tableOfContents[tocIndex].FilePosition;
+                    mp3Stream.Position = tocFilePositions[tocIndex];
 
                     repositionedFlag = false;
                 }
@@ -479,28 +462,21 @@ namespace NAudio.Wave
             Mp3Frame frame;
             do
             {
-                var index = new Mp3Index();
-                index.FilePosition = stream.Position;
-                index.SamplePosition = totalSamples;
-                if(isLiveFile)
+                long filePosition = stream.Position;
+                if (isLiveFile)
                     frame = ReadNextFrame(stream, false, increaseTocIndex: false);
                 else
                     frame = ReadNextFrame(stream, false, increaseTocIndex: true);
                 if (frame != null)
                 {
                     ValidateFrameFormat(frame);
-
+                    if (samplesPerFrame == 0)
+                        samplesPerFrame = frame.SampleCount;
                     totalSamples += frame.SampleCount;
-                    index.SampleCount = frame.SampleCount;
-                    index.ByteCount = (int)(stream.Position - index.FilePosition);
                     lock (repositionLock)
                     {
-                        tableOfContents.Add(index);
+                        tocFilePositions.Add(filePosition);
                     }
-                }
-                else
-                {
-                    //streamForUpdatingToc.Position = index.FilePosition;
                 }
             } while (frame != null);
         }
