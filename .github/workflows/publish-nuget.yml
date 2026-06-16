@@ -17,7 +17,7 @@ jobs:
         with:
           releaseType: patch
           incrementPerCommit: false
-          github_token: ${{ secrets.TOKEN1 }}
+          github_token: ${{ secrets.TOKEN }}
 
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -46,7 +46,7 @@ jobs:
       - name: Run Cake build
         run: dotnet cake build.cake
         env:
-          NUGET_API_KEY: ${{ secrets.TOKEN1 }}
+          NUGET_API_KEY: ${{ secrets.TOKEN }}
           PACKAGE_VERSION: ${{ steps.versioning.outputs.version }}
 
       - name: Tag release
