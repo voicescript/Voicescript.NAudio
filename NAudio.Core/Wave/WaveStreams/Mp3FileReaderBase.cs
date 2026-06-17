@@ -24,6 +24,11 @@ namespace NAudio.Wave
         private readonly XingHeader xingHeader;
         private readonly bool ownInputStream;
 
+        // max samples per MP3 frame is 1152 (for MPEG1 Layer III)
+        // no MP3 frames have more than 1152 samples in them
+        private const int maxMp3SamplesInFrame = 1152; 
+
+
         private List<long> tocFilePositions;
         private int samplesPerFrame;
         private int tocIndex;
@@ -154,8 +159,8 @@ namespace NAudio.Wave
                 decompressor = frameDecompressorBuilder(Mp3WaveFormat);
                 waveFormat = decompressor.OutputFormat;
                 bytesPerSample = (decompressor.OutputFormat.BitsPerSample)/8*decompressor.OutputFormat.Channels;
-                // no MP3 frames have more than 1152 samples in them
-                bytesPerDecodedFrame = 1152 * bytesPerSample;
+
+                bytesPerDecodedFrame = maxMp3SamplesInFrame * bytesPerSample;
                 // some MP3s I seem to get double
                 decompressBuffer = new byte[bytesPerDecodedFrame * 2];
             }
@@ -175,17 +180,10 @@ namespace NAudio.Wave
 
         private void CreateTableOfContents()
         {
-            try
-            {
-                // Just a guess at how many entries we'll need so the internal array need not resize very much
-                // 400 bytes per frame is probably a good enough approximation.
-                tocFilePositions = new List<long>((int)(mp3DataLength / 400));
-                UpdateToc(mp3Stream, isLiveFile: false);
-            }
-            catch (EndOfStreamException)
-            {
-                // not necessarily a problem
-            }
+            // Just a guess at how many entries we'll need so the internal array need not resize very much
+            // 400 bytes per frame is probably a good enough approximation.
+            tocFilePositions = new List<long>((int)(mp3DataLength / 400));
+            UpdateToc(mp3Stream, isLiveFile: false);
         }
 
         private void ValidateFrameFormat(Mp3Frame frame)
