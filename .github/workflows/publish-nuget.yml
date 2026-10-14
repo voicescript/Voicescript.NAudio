@@ -7,7 +7,9 @@ on:
 jobs:
   build:
     runs-on: windows-2022
-    
+    permissions:
+      contents: write
+      packages: write
 
     steps:
 
@@ -17,7 +19,7 @@ jobs:
         with:
           releaseType: patch
           incrementPerCommit: false
-          github_token: ${{ secrets.TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -46,7 +48,7 @@ jobs:
       - name: Run Cake build
         run: dotnet cake build.cake
         env:
-          NUGET_API_KEY: ${{ secrets.TOKEN }}
+          NUGET_API_KEY: ${{ secrets.GITHUB_TOKEN }}
           PACKAGE_VERSION: ${{ steps.versioning.outputs.version }}
 
       - name: Tag release
