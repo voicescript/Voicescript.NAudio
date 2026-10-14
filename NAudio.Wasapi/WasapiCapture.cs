@@ -88,6 +88,12 @@ namespace NAudio.CoreAudioApi
         /// </summary>
         public AudioClientShareMode ShareMode { get; set; }
 
+        public string MmcssTaskName { get; set; }
+
+        public bool IsMmcssRegistered { get; private set; }
+
+        public int MmcssLastError { get; private set; }
+
         /// <summary>
         /// Current Capturing State
         /// </summary>
@@ -206,6 +212,7 @@ namespace NAudio.CoreAudioApi
         private void CaptureThread(AudioClient client)
         {
             Exception exception = null;
+            var mmcssHandle = RegisterCaptureThreadWithMmcss();
             try
             {
                 DoRecording(client);
@@ -213,6 +220,10 @@ namespace NAudio.CoreAudioApi
             catch (Exception e)
             {
                 exception = e;
+            }
+            finally
+            {
+                RevertCaptureThreadFromMmcss(mmcssHandle);
             }
 
             try
@@ -229,6 +240,43 @@ namespace NAudio.CoreAudioApi
             captureThread = null;
             captureState = CaptureState.Stopped;
             RaiseRecordingStopped(exception);
+        }
+
+        private IntPtr RegisterCaptureThreadWithMmcss()
+        {
+            IsMmcssRegistered = false;
+            MmcssLastError = 0;
+            var taskName = MmcssTaskName;
+            if (string.IsNullOrEmpty(taskName))
+                return IntPtr.Zero;
+
+            try
+            {
+                uint taskIndex = 0;
+                var handle = NAudio.Wasapi.CoreAudioApi.NativeMethods.AvSetMmThreadCharacteristics(taskName, ref taskIndex);
+                if (handle == IntPtr.Zero)
+                {
+                    MmcssLastError = Marshal.GetLastWin32Error();
+                    return IntPtr.Zero;
+                }
+
+                IsMmcssRegistered = true;
+                return handle;
+            }
+            catch (Exception e)
+            {
+                MmcssLastError = e.HResult;
+                return IntPtr.Zero;
+            }
+        }
+
+        private void RevertCaptureThreadFromMmcss(IntPtr handle)
+        {
+            if (handle == IntPtr.Zero)
+                return;
+
+            NAudio.Wasapi.CoreAudioApi.NativeMethods.AvRevertMmThreadCharacteristics(handle);
+            IsMmcssRegistered = false;
         }
 
         private void DoRecording(AudioClient client)

@@ -22,5 +22,12 @@ namespace NAudio.Wasapi.CoreAudioApi
             [In] IntPtr activationParams, // n.b. is actually a pointer to a PropVariant, but we never need to pass anything but null
             [In] IActivateAudioInterfaceCompletionHandler completionHandler,
             out IActivateAudioInterfaceAsyncOperation activationOperation);
+
+        [DllImport("avrt.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        public static extern IntPtr AvSetMmThreadCharacteristics(string taskName, ref uint taskIndex);
+
+        [DllImport("avrt.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool AvRevertMmThreadCharacteristics(IntPtr avrtHandle);
     }
 }
